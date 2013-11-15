@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import *
 from heatmap import Py_HeatMap
 
-PATH_TO_COURT_IMG = "/home/will/code/newballa/static/nbagrid.bmp"
+PATH_TO_COURT_IMG = "static/nbagrid.bmp"
     
 class Main():
 	Session = sessionmaker()
@@ -14,15 +14,11 @@ class Main():
 	session = Session()
 
 	def index(self):
-		return "Derp!"
-	index.exposed = True
-    
-	def heatmap(self):
 		f = open("heatmap.html", "r")
 		html = f.read()
 		f.close()
 		return html
-	heatmap.exposed = True
+	index.exposed = True
 
 	def gen_heatmap_img(self, player_ids="", halve_court=0, sd=2.3, rdist=8):
 		testing = True
@@ -79,13 +75,12 @@ class Main():
 	get_players.exposed = True
 
 
-conf = {"/": {"tools.staticdir.root":"/home/will/code/newballa/"},
+conf = {"/": {"tools.staticdir.root": os.getcwd()},
         "/static": {"tools.staticdir.on": True,
                     "tools.staticdir.dir": "static"}
         }
 
-#cherrypy.server.socket_port = 8000
-#cherrypy.server.socket_host = "127.0.0.1"
-
-#cherrypy.quickstart(Main(), config=conf)
+cherrypy.server.socket_port = 8000
+cherrypy.server.socket_host = "127.0.0.1"
+cherrypy.quickstart(Main(), config=conf)
 
