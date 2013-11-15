@@ -1,0 +1,27 @@
+#teamselect { font-size: 60%; 
+                 position: absolute;
+                 left: 330px;
+                 top: 10px;
+				 border: 2px dotted #bbb;
+}
+
+#selectedplayers { font-size: 80%; 
+                      position: absolute; 
+				      left: 470px;
+	                  top: 10px;
+				      border: 2px dotted #bbb;
+}
+
+
+#unselectedplayers { font-size: 80%; 
+                      position: absolute; 
+				      left: 470px;
+	                  top: 300px;
+				      font-color: #bbb;
+}
+
+
+div.heatmapimg { border: 2px dotted #009;
+                 width: 300px;
+				 height: 564px;
+}     
