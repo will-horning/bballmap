@@ -14,73 +14,53 @@ scoreboard_urls = []
 
 x=0
 current_date = datetime.date.today()
-while current_date.year > 2011:
-    x+=1
-    scoreboard_urls.append(base_scoreboard_url + str(current_date).replace("-", ""))    
-    current_date -= datetime.timedelta(days=1)
-    print "day " + str(x)
-
+while current_date.year > 2012:
+	x+=1
+	scoreboard_urls.append(base_scoreboard_url + str(current_date).replace("-", ""))	
+	current_date -= datetime.timedelta(days=1)
 gametracker_urls = set()
 
 for url in scoreboard_urls:
-    try:
-        html = urllib2.urlopen(url).read()
-        links = re.findall('''href=["'](.[^"']+)["']''', html)    
-        gametracker_urls |= set(["http://www.cbssports.com" + l for l in links if "gametracker/live" in l])
-    except urllib2.HTTPError:
-        continue
-    
+	try:
+		html = urllib2.urlopen(url).read()
+		links = re.findall('''href=["'](.[^"']+)["']''', html)	
+		gametracker_urls |= set(["http://www.cbssports.com" + l for l in links if "gametracker/live" in l])
+	except urllib2.HTTPError:
+		continue
+	
 def extract_shotdata(html):
-    shot_data_start = 'shotData: "'
-    shot_data_end = "awayScoringData"
-    i1 = html.find(shot_data_start) + len(shot_data_start)
-    i2 = html.find(shot_data_end)
-    for shot_data_string in html[i1:i2].strip().split("~"):
-        session.add(Shot(shot_data_string))
-    
+	shot_data_start = 'shotData: "'
+	shot_data_end = "awayScoringData"
+	i1 = html.find(shot_data_start) + len(shot_data_start)
+	i2 = html.find(shot_data_end)	
+	date_string = re.search(r'NBA_(\d{8})', html).group(1)
+	#shot_data = re.search(r'shotData: (.*?)"', html)
+	for shot_data_string in html[i1:i2].strip().split("~"):
+		session.add(Shot(shot_data_string, date_string))
+	
 def extract_player_ids(html):
-    names2pids = {}
-    awaystart = 'awayScoringData: "'
-    homestart = 'homeScoringData: "'
-    awayteamstart = '"awayTeam fontUbuntuBold">'
-    hometeamstart = '"homeTeam fontUbuntuBold">'
-    i1 = html.find(awaystart) + len(awaystart)
-    i2 = html.find('"', i1)
-    away_data = html[i1:i2].split("|")
-    i1 = html.find(homestart) + len(homestart)
-    i2 = html.find('"', i1)
-    home_data = html[i1:i2].split("|")
-    away_data = [s[:s.find(",")] for s in away_data]
-    home_data = [s[:s.find(",")] for s in home_data]
-    i1 = html.find(awayteamstart) + len(awayteamstart)
-    i2 = html.find('<', i1)
-    away_team_name = html[i1:i2]
-    i1 = html.find(hometeamstart) + len(hometeamstart)
-    i2 = html.find('<', i1)
-    home_team_name = html[i1:i2]
-    home_team = session.query(Team).filter(Team.name == home_team_name).first()
-    away_team = session.query(Team).filter(Team.name == away_team_name).first()
-    if not home_team:
-        session.add(Team(home_team_name))
-        home_team = session.query(Team).filter(Team.name == home_team_name).first()
-    if not away_team:
-        session.add(Team(away_team_name))
-        away_team = session.query(Team).filter(Team.name == away_team_name).first()
-    def f(player_data, team_id):
-        for player_data_string in player_data:
-            pid, name = player_data_string.split(":")
-            pid = int(pid)
-            if "\xa0" in name: name = name.replace("\xa0", " ")
-            if "&nbsp" in name: name = name.replace("&nbsp;", " ").split(" ", 1)
-            if len(name) == 1:
-                fname = name[0]
-                lname = ""
-            else:
-                fname, lname = name[0], "".join(name[1:])
-            if not session.query(Player).get(pid):
-                session.add(Player(pid, fname, lname, team_id))
-    f(away_data, away_team.id)
-    f(home_data, home_team.id)
+	away_data = re.search(r'awayScoringData: "(.*?)"', html).group(1).split("|")
+	home_data = re.search(r'homeScoringData: "(.*?)"', html).group(1).split("|")
+	away_team_name, home_team_name = re.search(r' - (.*?) vs. (.*?) - ', html).groups()
+	def f(team_name, player_data):
+		player_team = session.query(Team).filter(Team.name == team_name).first()
+		if not player_team:
+			session.add(Team(team_name))
+			player_team = session.query(Team).filter(Team.name == team_name).first()
+		for s in player_data:
+			player_id, player_name = re.search(r'(\d*):(.*?),', s).groups()
+			player_id = int(player_id)
+			if "\xa0" in player_name: player_name = player_name.replace("\xa0", " ")
+			if "&nbsp" in player_name: player_name = player_name.replace("&nbsp;", " ").split(" ", 1)
+			if len(player_name) == 1:
+				fname = player_name[0]
+				lname = ""
+			else:
+				fname, lname = player_name[0], "".join(player_name[1:])
+			if not session.query(Player).get(player_id):
+				session.add(Player(player_id, fname, lname, player_team.id))
+	f(away_team_name, away_data)
+	f(home_team_name, home_data)
 
 while gametracker_urls:
 	url = gametracker_urls.pop()
@@ -91,7 +71,7 @@ while gametracker_urls:
 	except urllib2.URLError:
 		print url
 	print len(gametracker_urls)
-    
+									                  
 session.commit()
 
 

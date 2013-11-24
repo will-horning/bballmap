@@ -20,6 +20,14 @@ class Main():
 		return html
 	index.exposed = True
 
+	def foul_shot_filter(self, shot_rows):
+		filtered_shot_rows = []
+		for shot_row in shot_rows:
+			if ("Free" not in shot_row[3] and
+				"Lay" not in shot_row[3]):
+				filtered_shot_rows.append(shot_row)
+		return filtered_shot_rows
+
 	def gen_heatmap_img(self, player_ids="", halve_court=0, sd=2.3, rdist=8):
 		testing = True
 		if isinstance(player_ids, list):
@@ -34,20 +42,12 @@ class Main():
 				 " or ".join(["player_id=" + str(i) for i in player_ids])
 			sqlresponse = self.session.execute(q)
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
-			filtered_shot_rows = []
-			print [r[3] for r in shot_rows]
-			for shot_row in shot_rows:
-				if ("Free" not in shot_row[3] and
-                    "Lay" not in shot_row[3]):
-					filtered_shot_rows.append(shot_row)
+			filtered_shot_rows = self.foul_shot_filter(shot_rows)
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
-			#hm = Py_HeatMap(shot_rows, PATH_TO_COURT_IMG)
-
 			hm.generate_heatmap_image()
 			path = "static/" + path
 			hm.im.save(path, "JPEG")
 			del hm
-            #return "<img src='static/nbagrid.bmp'>"
 			return imtag
 	gen_heatmap_img.exposed = True
 
