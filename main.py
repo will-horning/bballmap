@@ -42,6 +42,7 @@ class Main():
 				 " or ".join(["player_id=" + str(i) for i in player_ids])
 			sqlresponse = self.session.execute(q)
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
+			print len(shot_rows)
 			filtered_shot_rows = self.foul_shot_filter(shot_rows)
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
 			hm.generate_heatmap_image()
