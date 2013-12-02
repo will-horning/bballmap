@@ -1,3 +1,9 @@
+"""
+This script is for tallying up the number of shots a player has, so the ones
+with statiscally insignificant playing time can be filtered out quickly.
+Only needs to be run once with db update.
+"""
+
 from models import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine

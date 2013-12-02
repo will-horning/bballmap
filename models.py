@@ -4,11 +4,12 @@ from sqlalchemy.orm import sessionmaker, relation, backref
 import datetime
 
 db = create_engine("sqlite:///shots.db")
-
 Base = declarative_base()
 
-QUARTER_LENGTH_IN_MIN = 12
+QUARTER_LENGTH_IN_MIN = 12 # Used for converting game time to absolute time.
 
+
+# Shot types are recorded in CBS Sports data as an integer corresponding to these values:
 shot_type_map = {}
 shot_type_map[0] = "Shot"
 shot_type_map[1] = "Jump Shot"
@@ -36,6 +37,7 @@ shot_type_map[22] = "Fadeaway Jump Shot"
 shot_type_map[23] = "Floating Jump Shot"
 shot_type_map[24] = "Leaning Jump Shot"
 shot_type_map[25] = "Mini Hook Shot"
+
     
 class Team(Base):
     __tablename__ = "teams"
@@ -72,8 +74,6 @@ class Shot(Base):
 	__tablename__ = "shots"
 	id = Column(Integer, primary_key=True)
 	shotresult = Column(Integer)
-	#time = Column(String(8))
-	#date = Column(String(8))
 	datetime = Column(DateTime)
 	quarter = Column(Integer)
 	player_id = Column(Integer, ForeignKey("players.id"))
@@ -88,7 +88,6 @@ class Shot(Base):
 		ret = []
 		if self.shotresult: ret = ["Made"]
 		else: ret = ["Missed"]
-		#ret += str(self.player_id)
 		ret += [" shot by ", self.player.firstname + " " + self.player.lastname]
 		return "".join(ret)
 
@@ -96,29 +95,31 @@ class Shot(Base):
 		shot_data = shot_data_string.split(",")
 		self.shotresult = int(shot_data[0])
 		self.quarter = int(shot_data[2])
-		minutes_remaining = 0
-		seconds_remaining = 0
-		if ":" in shot_data[1]:
-			minutes_remaining = int(shot_data[1].split(":")[0])
-			seconds_remaining = int(shot_data[1].split(":")[1])
-		elif "." in shot_data[1]:
-			seconds_remaining = int(shot_data[1].split(".")[0])
-		dt = datetime.datetime(int(date_string[:4]), int(date_string[4:6]),
-									   int(date_string[6:8]), 0, 0, 0)
-		dt += datetime.timedelta(minutes = QUARTER_LENGTH_IN_MIN * self.quarter)
-		dt -= datetime.timedelta(minutes = minutes_remaining, seconds = seconds_remaining)
-		self.datetime = dt
+		self.datetime = self.get_absolute_time(shot_data[1], date_string)
 		self.player_id = int(shot_data[3])
 		self.shot_type = shot_type_map[int(shot_data[5])]
 		self.xcoord = int(shot_data[6])
 		self.ycoord = int(shot_data[7])
 		self.distance = int(shot_data[8].replace('"', ''))
+
+	def get_absolute_time(self, game_time_string, date_string):
+		"""
+		CBS Sports data records the time for a shot as the time remaining in the current quarter.
+		This function converts the game time string to a datetime instance recording the exact time and
+		date the shot was taken (for now the hour field is left to zero).
+		"""
+		minutes_remaining = 0
+		seconds_remaining = 0
+		if ":" in game_time_string:
+			minutes_remaining = int(game_time_string.split(":")[0])
+			seconds_remaining = int(game_time_string.split(":")[1])
+		elif "." in game_time_string:
+			seconds_remaining = int(game_time_string.split(".")[0])
+		dt = datetime.datetime(int(date_string[:4]), int(date_string[4:6]),
+									   int(date_string[6:8]), 0, 0, 0)
+		dt += datetime.timedelta(minutes = QUARTER_LENGTH_IN_MIN * self.quarter)
+		dt -= datetime.timedelta(minutes = minutes_remaining, seconds = seconds_remaining)
+		return dt
 		
-		
-def is_free_throw(shot):
-	if type(shot) is Shot:
-		return shot.shot_type in range(10,19)
-	elif type(shot) is int or type(shot) is str:
-		return int(shot) in range(10,19)
 
 Base.metadata.create_all(db)

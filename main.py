@@ -21,6 +21,9 @@ class Main():
 	index.exposed = True
 
 	def foul_shot_filter(self, shot_rows):
+		"""
+		Returns only rows of Shots table that are NOT free throws or uncontested layups.
+		"""
 		filtered_shot_rows = []
 		for shot_row in shot_rows:
 			if ("Free" not in shot_row[3] and
@@ -29,12 +32,26 @@ class Main():
 		return filtered_shot_rows
 
 	def gen_heatmap_img(self, player_ids="", halve_court=0, sd=2.3, rdist=8):
+		"""
+		:param player_ids: Either string or int that will contain one or more player ids. If multiple
+		id's are input they heatmap produced will use shots taken by all the included
+		players.
+
+		:keyword halve_court: For plotting first and second halves seperately. Probably gonna get deprecated.
+
+		:keyword sd: Standard deviation for the normal curve plotted around shot locations.
+
+		:keyword rdist: Radial distance from a shot for the normal curve to encompass. Bigger rdist means more
+		smoothed distribution plot.
+
+		:returns: The img tag for the finished heatmap img, as a string.
+		"""
 		testing = True
 		if isinstance(player_ids, list):
 			player_ids = [int(pid) for pid in player_ids]
 		else:
 			player_ids = [int(player_ids)]
-		path = str(player_ids) + "_" + str(halve_court) + ".bmp"
+		path = str(player_ids) + "_" + str(halve_court) + ".gif"
 		imtag = "<img src=\"static/" + path + "\">"
 		if path not in os.listdir("static/") or testing:
 			q =  "select xcoord, ycoord, shotresult, " + \
@@ -42,27 +59,27 @@ class Main():
 				 " or ".join(["player_id=" + str(i) for i in player_ids])
 			sqlresponse = self.session.execute(q)
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
-			print len(shot_rows)
 			filtered_shot_rows = self.foul_shot_filter(shot_rows)
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
 			hm.generate_heatmap_image()
 			path = "static/" + path
-			hm.im.save(path, "JPEG")
+			hm.im.save(path, "gif")
 			del hm
 			return imtag
 	gen_heatmap_img.exposed = True
 
 	def get_teams(self):
+		""" Returns all team names in JSON. """
 		json_teams = []
 		teams = self.session.query(Team).all()
 		for team in teams:
 			json_team = "{'id': " + str(team.id) + ", 'name': '" + team.name + "'}"
 			json_teams.append(json_team)
 		return "{\"teams\": [" + ",".join(json_teams) + "]}"
-
 	get_teams.exposed = True
 
 	def get_players(self, team_id=""):
+		""" Returns all the players on the given team in JSON."""
 		tid = int(team_id[4:])
 		json_players = []
 		team = self.session.query(Team).filter_by(id = tid).first()

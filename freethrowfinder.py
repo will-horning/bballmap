@@ -1,3 +1,10 @@
+"""
+Most of the free throws in the CBS Sports data are labeled as such, but there are
+some that seem to be slipping through.  This script looks through a player's shot in
+order of datetime to find shots taken at the same second in order to detect free throws,
+it then insures the shot is labeled properly.
+"""
+
 from models import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine

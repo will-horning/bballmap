@@ -2,7 +2,6 @@
 import math, random
 from PIL import Image
 from time import time
-from utils import *
 from models import *
 
 class HeatMap():
@@ -13,6 +12,10 @@ class HeatMap():
 		self.grid_coords = self.extract_coords(raw_shot_rows)
 		self.cell_w = int(round(float(self.im.size[0]) / float(self.grid_w)))
 		self.cell_h = int(round(float(self.im.size[1]) / float(self.grid_h)))
+
+
+	def in_bounds(self, loc, dim):
+		return loc[0] < dim[0] and loc[0] >= 0 and loc[1] < dim[1] and loc[1] >= 0
 
 	def extract_coords(self, raw_shot_rows):
 		"""
@@ -135,12 +138,6 @@ class HeatMap():
 				except IndexError:
 					break
 			q += self.cell_h
-
-	def filter_layups(self):
-		self.shot_objs = [s for s in self.shot_objs if int(s.shot_type) is not 5]
-
-	def filter_foul_shots(self):
-		self.shot_objs = [s for s in self.shot_objs if not is_free_throw(s)]
 
 ##
 ##class C_HeatMap(HeatMap):
@@ -300,7 +297,7 @@ class Py_HeatMap(HeatMap):
 		for y in range(self.cell_h):
 			for x in range(self.cell_w):
 				cloc = ((self.cell_w * loc[0]) + x, (self.cell_h * loc[1]) + y)
-				if in_bounds(cloc, self.im.size):
+				if self.in_bounds(cloc, self.im.size):
 					pix = self.im.getpixel(cloc)
 					new_rgb = list(pix)
 					for i in range(3):
@@ -321,7 +318,7 @@ class Py_HeatMap(HeatMap):
 		for x in range(self.cell_w):
 			for y in range(self.cell_h):
 				cloc = ((self.cell_w * loc[0]) + x, (self.cell_h * loc[1]) + y)
-				if in_bounds(cloc, self.im.size):
+				if self.in_bounds(cloc, self.im.size):
 					index = ((self.im.size[0] * cloc[1]) + cloc[0])
 					pix = pixels[index]
 					new_rgb = list(pix)
