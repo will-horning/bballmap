@@ -6,7 +6,7 @@ function(){
 	var unselected_player_list = [];
 	var selected_player_list = [];
 	var td = [];
-	var halve_court = 1;
+
 
 	list_remove = function(a, k){
 		newa = [];
@@ -17,19 +17,6 @@ function(){
 		}
 		return newa;
 	}
-
-	$("#togglehalvecourt").click(
-		function(){
-			if(halve_court == 1){
-				halve_court = 0;
-			}
-			else {
-				halve_court = 1;
-			}
-			update_heatmap_img();
-
-		}
-	);
 
 	update_players = function(){
 		alert(selected_players.length);
@@ -126,7 +113,6 @@ function(){
 	update_heatmap_img = function(){
 		$.get("gen_heatmap_img/",
 			  {"player_ids": selected_player_list,
-			   "halve_court": halve_court,
 			   "sd": sd},
 			function(data){
 				$('#heatmapdiv').html(data);

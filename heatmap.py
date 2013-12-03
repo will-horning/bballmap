@@ -1,8 +1,8 @@
-#import radiator
 import math, random
 from PIL import Image
 from time import time
 from models import *
+from collections import defaultdict
 
 class HeatMap():
 	def __init__(self, raw_shot_rows, impath, grid_w=50, grid_h=94):
@@ -12,7 +12,6 @@ class HeatMap():
 		self.grid_coords = self.extract_coords(raw_shot_rows)
 		self.cell_w = int(round(float(self.im.size[0]) / float(self.grid_w)))
 		self.cell_h = int(round(float(self.im.size[1]) / float(self.grid_h)))
-
 
 	def in_bounds(self, loc, dim):
 		return loc[0] < dim[0] and loc[0] >= 0 and loc[1] < dim[1] and loc[1] >= 0
@@ -60,7 +59,8 @@ class HeatMap():
 	def halve_court(self):
 		"""
 		Flips any locations below the half court line up to the
-		top half.
+		top half. (CBS Sports plots shot locations on a full court map, 1st and 2nd quarter shots will appear
+		on one half, 3rd and 4th on the other. This just ensures all the shots are plotted on one half.)
 		"""
 		locs = self.shot_locs.copy()
 		for loc, v in locs.iteritems():
@@ -97,15 +97,11 @@ class HeatMap():
 		are 2tuple locations, values are lists with the following format:
 		shot_locs[loc] = [num_made_from_loc, num_missed_from_loc]
 		"""
-		self.shot_locs = {}
+		self.shot_locs = defaultdict(lambda: [0,0])
 		for shot in self.grid_coords:
 			shot_result = int(shot[2])
 			loc = (shot[0], shot[1])
-			try:
-				self.shot_locs[loc][shot_result] += 1
-			except KeyError:
-				self.shot_locs[loc] = [0,0]
-				self.shot_locs[loc][shot_result] += 1
+			self.shot_locs[loc][shot_result] += 1
 
 	def remove_outliers(self, upper_bound):
 		"""
@@ -138,34 +134,6 @@ class HeatMap():
 				except IndexError:
 					break
 			q += self.cell_h
-
-##
-##class C_HeatMap(HeatMap):
-##	def generate_heatmap_image(self, grid_w=50, grid_h=94, halvecourt=True, rdist=8, sd=2.5):
-##		self.set_grid_size((grid_w,grid_h))
-##		self.tally_shot_locs()
-##		self.remove_outliers(100)
-##		if halvecourt: self.halve_court()
-##		self.rad_and_shad(rdist, sd) 
-##		self.im.putdata(self.pxs)
-##		
-##	def format_shot_locs_for_C(self):
-##		made_flat = []
-##		missed_flat = []
-##		locs = []
-##		for k,v in self.shot_locs.iteritems():
-##			missed_flat.append(v[0])
-##			made_flat.append(v[1])
-##			locs.append(k)
-##		return missed_flat, made_flat, locs
-##
-##	def rad_and_shad(self, r_dist=5, sd=2.5):
-##		missed, made, locs = self.format_shot_locs_for_C()
-##		values = list(self.im.getdata())
-##		self.pxs = radiator.qwikrad(missed, made, locs, r_dist,
-##									self.grid_w, self.grid_h, values,
-##									self.im.size[0], self.im.size[1], sd)
-##	
 
 class Py_HeatMap(HeatMap):
 

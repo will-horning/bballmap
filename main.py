@@ -31,13 +31,11 @@ class Main():
 				filtered_shot_rows.append(shot_row)
 		return filtered_shot_rows
 
-	def gen_heatmap_img(self, player_ids="", halve_court=0, sd=2.3, rdist=8):
+	def gen_heatmap_img(self, player_ids="", sd=2.3, rdist=8):
 		"""
 		:param player_ids: Either string or int that will contain one or more player ids. If multiple
 		id's are input they heatmap produced will use shots taken by all the included
 		players.
-
-		:keyword halve_court: For plotting first and second halves seperately. Probably gonna get deprecated.
 
 		:keyword sd: Standard deviation for the normal curve plotted around shot locations.
 
@@ -51,7 +49,7 @@ class Main():
 			player_ids = [int(pid) for pid in player_ids]
 		else:
 			player_ids = [int(player_ids)]
-		path = str(player_ids) + "_" + str(halve_court) + ".gif"
+		path = str(player_ids) + "_" + ".gif"
 		imtag = "<img src=\"static/" + path + "\">"
 		if path not in os.listdir("static/") or testing:
 			q =  "select xcoord, ycoord, shotresult, " + \
