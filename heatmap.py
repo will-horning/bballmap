@@ -14,7 +14,7 @@ class HeatMap():
 		self.cell_h = int(round(float(self.im.size[1]) / float(self.grid_h)))
 
 	def in_bounds(self, loc, dim):
-		return loc[0] < dim[0] and loc[0] >= 0 and loc[1] < dim[1] and loc[1] >= 0
+		return loc[0] < self.im.size[0] and loc[0] >= 0 and loc[1] < self.im.size[1] and loc[1] >= 0
 
 	def extract_coords(self, raw_shot_rows):
 		"""
@@ -144,7 +144,7 @@ class Py_HeatMap(HeatMap):
 		self.halve_court()
 		self.py_radiate(**kwargs)
 		self.update_extrema()
-		self.find_colors2()
+		self.find_colors()
 		self.shade_all()
 
 
@@ -208,39 +208,19 @@ class Py_HeatMap(HeatMap):
 		for loc, shot_count in self.shot_locs.iteritems():
 			nmiss = shot_count[0]
 			nmade = shot_count[1]
-			hue = self.get_color(nmade - nmiss)
-			sat = self.get_saturation_value(nmade, nmiss)
-			self.loc_colors[loc] = tuple([int(round(h * sat)) for h in hue])
-
-	def find_colors2(self):
-		"""
-		Creates the 3tuple rgb value for each entry in shot_locs,
-		then stores it in the dict self.loc_colors. 
-		"""
-		self.loc_colors = {}
-		for loc, shot_count in self.shot_locs.iteritems():
-			nmiss = shot_count[0]
-			nmade = shot_count[1]
 			miss_p = (float(nmiss) - self.miss_min) / (self.miss_max - self.miss_min)
 			made_p = (float(nmade) - self.made_min) / (self.made_max - self.made_min)
 			r = int(round(255*made_p))
 			b = int(round(255*miss_p))
 			self.loc_colors[loc] = (r,0,b)
 
-				
-				
-	def find_colors_test(self):
-		self.loc_colors = {}
-		for loc, shot_count in self.shot_locs.iteritems():
-			nmiss = shot_count[0]
-			nmade = shot_count[1]
-			if (nmiss + nmade) == 0: continue
-			sp = float(nmade) / (nmiss + nmade)
-			if sp < 0.5: r, b = int(round(255*2*sp)), 255
-			else: b, r = int(round(255*2*sp)), 255
-			self.loc_colors[loc] = (r,0,b)
-
 	def py_radiate(self, r_dist=5):
+		"""
+		Shades a normal distribution around each shot coloring the nearby grid-cells appropriately,
+		currently uses a gaussian function for the curve.
+
+		:keyword rdist: The radius of the gaussian bump applied to each location.
+		"""
 		locs = self.shot_locs.copy()
 		for loc, vals in locs.iteritems():
 			r_locs = []
@@ -281,29 +261,6 @@ class Py_HeatMap(HeatMap):
 					self.shade_grid_cell((x,y), color)
 				except KeyError:
 					self.shade_grid_cell((x,y), (13,0,9))
-
-	def shade_grid_cell2(self, loc, rgb, pixels, opacity=0.8):
-		for x in range(self.cell_w):
-			for y in range(self.cell_h):
-				cloc = ((self.cell_w * loc[0]) + x, (self.cell_h * loc[1]) + y)
-				if self.in_bounds(cloc, self.im.size):
-					index = ((self.im.size[0] * cloc[1]) + cloc[0])
-					pix = pixels[index]
-					new_rgb = list(pix)
-					for i in range(3):
-						new_rgb[i] /= 4
-						new_rgb[i] += int(round(rgb[i] * opacity))
-					pixels[index] = tuple(new_rgb)
-					
-	def fill_out(self):
-		all_locs = []
-		for x in range(self.grid_w):
-			for y in range(self.grid_h):
-				loc = (x,y)
-				if loc not in self.shot_locs.keys():
-					self.shot_locs[loc] = [0, 0]
-				if len(self.shot_locs[loc]) == 0:
-					self.shot_locs[loc] = [0, 0]
 
 	def get_color(self, val):
 		nval = val - self.diff_min
@@ -346,30 +303,5 @@ class Py_HeatMap(HeatMap):
 		return
 		for b in rr:
 			self.spectrum.append((255,0,b))
-
-	def write_spectrum(self):
-		for x in range(self.im.size[0]):
-			i = int(round(float(x * len(self.spectrum)) / 300))
-			for y in range(270,300):
-				self.im.putpixel((x,y), self.spectrum[i])
-
-	def shade_all2(self):
-		pixels = list(self.im.getdata())
-		for x in range(self.grid_w):
-			for y in range(self.grid_h):
-				try:
-					color = self.loc_colors[(x,y)]
-					self.shade_grid_cell2((x,y), color, pixels)
-				except KeyError:
-					self.shade_grid_cell2((x,y), (13,0,9), pixels)
-		self.im.putdata(pixels)
-		
-
-	def write_spectrum2(self):
-		for x in range(250):
-			for y in range(282,532):
-				r = 255 * (float(x) / 250)
-				b = 255 * (float(y-282) / 250)
-				self.im.putpixel((x,y), (r,0,b))
 
 		
