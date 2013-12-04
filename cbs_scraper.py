@@ -8,13 +8,12 @@ db = create_engine("sqlite:///shots.db")
 Session.configure(bind=db)
 session = Session()
 
-
 base_scoreboard_url = "http://www.cbssports.com/nba/scoreboard/"
 scoreboard_urls = []
 
 x=0
 current_date = datetime.date.today()
-while current_date.year > 2012:
+while current_date.year > 2009:
 	x+=1
 	scoreboard_urls.append(base_scoreboard_url + str(current_date).replace("-", ""))	
 	current_date -= datetime.timedelta(days=1)
@@ -29,19 +28,22 @@ for url in scoreboard_urls:
 		continue
 	
 def extract_shotdata(html):
-	shot_data_start = 'shotData: "'
-	shot_data_end = "awayScoringData"
-	i1 = html.find(shot_data_start) + len(shot_data_start)
-	i2 = html.find(shot_data_end)	
 	date_string = re.search(r'NBA_(\d{8})', html).group(1)
-	#shot_data = re.search(r'shotData: (.*?)"', html)
-	for shot_data_string in html[i1:i2].strip().split("~"):
-		session.add(Shot(shot_data_string, date_string))
-	
+	shot_data = re.search(r'shotData: "(.*?)\s', html).group(1)
+	if shot_data:
+		for shot_data_string in shot_data.strip().split("~"):
+			session.add(Shot(shot_data_string, date_string))
+	else:
+		f = open("foo.txt", "w")
+		f.write(html)
+		f.close()
+		assert False
+		
 def extract_player_ids(html):
 	away_data = re.search(r'awayScoringData: "(.*?)"', html).group(1).split("|")
 	home_data = re.search(r'homeScoringData: "(.*?)"', html).group(1).split("|")
-	away_team_name, home_team_name = re.search(r' - (.*?) vs. (.*?) - ', html).groups()
+	away_team_name, home_team_name = re.search(r'[->] ?(.*?) vs. (.*?) -', html).groups()
+
 	def f(team_name, player_data):
 		player_team = session.query(Team).filter(Team.name == team_name).first()
 		if not player_team:

@@ -26,6 +26,7 @@ class Main():
 		"""
 		filtered_shot_rows = []
 		for shot_row in shot_rows:
+			print shot_row[3]
 			if ("Free" not in shot_row[3] and
 				"Lay" not in shot_row[3]):
 				filtered_shot_rows.append(shot_row)
@@ -44,6 +45,7 @@ class Main():
 
 		:returns: The img tag for the finished heatmap img, as a string.
 		"""
+		if player_ids == "": return ""
 		testing = True
 		if isinstance(player_ids, list):
 			player_ids = [int(pid) for pid in player_ids]
@@ -57,7 +59,9 @@ class Main():
 				 " or ".join(["player_id=" + str(i) for i in player_ids])
 			sqlresponse = self.session.execute(q)
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
+			print len(shot_rows)
 			filtered_shot_rows = self.foul_shot_filter(shot_rows)
+			print len(filtered_shot_rows)
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
 			hm.generate_heatmap_image()
 			path = "static/" + path
@@ -80,13 +84,14 @@ class Main():
 		""" Returns all the players on the given team in JSON."""
 		tid = int(team_id[4:])
 		json_players = []
-		team = self.session.query(Team).filter_by(id = tid).first()
-		players = team.players
+		t = self.session.query(Team).filter_by(id = tid).first()
+		players = t.players
 		for player in players:
-			name = player.firstname + " " + player.lastname
-			name = name.replace("'", "")
-			json_player = "{'id': " + str(player.id) + ", 'name': '" + name + "'}"
-			json_players.append(json_player)
+			if player.n_shots > 400:
+				name = player.firstname + " " + player.lastname
+				name = name.replace("'", "")
+				json_player = "{'id': " + str(player.id) + ", 'name': '" + name + "'}"
+				json_players.append(json_player)
 		return "{\"players\": [" + ",".join(json_players) + "]}"
 	get_players.exposed = True
 

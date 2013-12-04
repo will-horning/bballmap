@@ -69,7 +69,6 @@ class Player(Base):
 	def __repr__(self):
 		return self.firstname + " " + self.lastname + " " + str(self.id)
 
-
 class Shot(Base):
 	__tablename__ = "shots"
 	id = Column(Integer, primary_key=True)

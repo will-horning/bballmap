@@ -15,12 +15,9 @@ Session.configure(bind=db)
 session = Session()
 
 players = session.query(Player).all()
-i = 0
 for p in players:
 	shots = session.query(Shot).filter_by(player_id = p.id).all()
 	p.n_shots = len(shots)
-	print i
-	i += 1
 	session.add(p)
 session.commit()
 session.close()
