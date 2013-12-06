@@ -20,16 +20,16 @@ class Main():
 		return html
 	index.exposed = True
 
-	def foul_shot_filter(self, shot_rows):
+	def free_throw_filter(self, shot_rows):
 		"""
 		Returns only rows of Shots table that are NOT free throws or uncontested layups.
 		"""
 		filtered_shot_rows = []
 		for shot_row in shot_rows:
 			print shot_row[3]
-			if ("Free" not in shot_row[3] and
-				"Lay" not in shot_row[3]):
+			if not (shot_row[0] == 0 and abs(shot_row[1]) in [28,42]) and ("Free" not in shot_row[3] and "Lay" not in shot_row[3]):
 				filtered_shot_rows.append(shot_row)
+
 		return filtered_shot_rows
 
 	def gen_heatmap_img(self, player_ids="", sd=2.3, rdist=8):
@@ -56,12 +56,12 @@ class Main():
 		if path not in os.listdir("static/") or testing:
 			q =  "select xcoord, ycoord, shotresult, " + \
 				" shot_type from shots where " + \
-				 " or ".join(["player_id=" + str(i) for i in player_ids])
+				 " or ".join(["player_id=" + str(i) for i in player_ids]) 
 			sqlresponse = self.session.execute(q)
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
-			print len(shot_rows)
-			filtered_shot_rows = self.foul_shot_filter(shot_rows)
-			print len(filtered_shot_rows)
+			i = len(shot_rows)
+			filtered_shot_rows = self.free_throw_filter(shot_rows)
+			print str(i) + str(len(filtered_shot_rows))
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
 			hm.generate_heatmap_image()
 			path = "static/" + path

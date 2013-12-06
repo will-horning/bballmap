@@ -117,24 +117,6 @@ class HeatMap():
 			self.shot_locs.pop(k)
 		return removed
 	
-	def non_zero_shot_locs(self):
-		return [v for v in self.shot_locs.values() if sum(v[:2]) > 0] 
-
-	def write_grid(self, grid_color=(0,0,0)):
-		p = 0
-		while p < self.im.size[0]:
-			for q in range(0,self.im.size[1]):
-				self.im.putpixel((p,q), grid_color)
-			p += self.cell_w
-		q = 0
-		while q < self.im.size[1]:
-			for p in range(0, self.im.size[0]):
-				try:
-					self.im.putpixel((p, q), grid_color)
-				except IndexError:
-					break
-			q += self.cell_h
-
 class Py_HeatMap(HeatMap):
 
 	def generate_heatmap_image(self, **kwargs):
@@ -146,7 +128,6 @@ class Py_HeatMap(HeatMap):
 		self.update_extrema()
 		self.find_colors()
 		self.shade_all()
-
 
 	def linear_saturation(self, val, dist, r_dist, s=0.15):
 		return int(round(float(val) * ((1 - (s * dist)) * val)))
