@@ -9,7 +9,7 @@ PATH_TO_COURT_IMG = "static/nbagrid.bmp"
     
 class Main():
 	Session = sessionmaker()
-	db = create_engine("sqlite:///shots.db")
+	db = create_engine("sqlite:///shots.db", connect_args={'check_same_thread':False})
 	Session.configure(bind=db)
 	session = Session()
 
@@ -92,7 +92,7 @@ class Main():
 				name = name.replace("'", "")
 				json_player = "{'id': " + str(player.id) + ", 'name': '" + name + "'}"
 				json_players.append(json_player)
-		return "{\"players\": [" + ",".join(json_players) + "]}"
+		return "{\"teamname\": \"" + t.name + "\", \"players\": [" + ",".join(json_players) + "]}"
 	get_players.exposed = True
 
 

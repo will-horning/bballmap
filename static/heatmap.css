@@ -1,23 +1,26 @@
-#teamselect { font-size: 60%; 
+#teamselect { font-size: 90%; 
                  position: absolute;
                  left: 330px;
                  top: 10px;
 				 border: 2px dotted #bbb;
 }
 
-#selectedplayers { font-size: 80%; 
-                      position: absolute; 
-				      left: 470px;
+#selectedplayers { font-size: 100%; 
+                      position: relative; 
+				      left: 50px;
 	                  top: 10px;
+				      width: 200px;
+		              text-align: center;
 				      border: 2px dotted #bbb;
 }
 
 
-#unselectedplayers { font-size: 80%; 
+#unselectedplayers { font-size: 100%; 
                       position: absolute; 
-				      left: 470px;
-	                  top: 300px;
+				      left: 520px;
+	                  top: 10px;
 				      font-color: #bbb;
+				 border: 2px dotted #bbb;
 }
 
 

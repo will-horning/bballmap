@@ -45,7 +45,7 @@ function(){
 			divs += make_simple_div("team" + team.id,
 									"teamlink", link );
 		}
-		$('#teamselect').html(divs);
+		$('#teamselect').append(divs);
 		activate_tselect();
 	});
 
@@ -63,7 +63,7 @@ function(){
 				selected_player_list = [];
 				$('#heatmapdiv').html("");
 				$('#selectedplayers').html("");
-				$('#unselectedplayers').html(divs);
+				$('#unselectedplayers').html(data["teamname"] + divs);
 				activate_pselect();
 			});
 		});
@@ -120,51 +120,6 @@ function(){
 		);
 	};
 });
-
-
-// 	$.post("gen_heatmap_img/", {"player_ids": [73, 274]},
-// 		function(data){
-// 			$('#heatmapdiv').html(data);
-// 		});
-
-
-// 	$('div.teamlink').click($.get("get_player_hrefs", {"team_id": this.id},
-// 		function(data){
-// 			$('#playerselect').html(data);
-// 			activate_pselect();
-// 		}));
-
-// 	activate_pselect = function(){
-// 		$('div.playerlink').click(function(){
-// 			pid = this.id;
-// 			name = "#player" + pid;
-// 			$(name).hide();
-// 		});
-// 	};
-
-// 				$.post("get_game_hrefs", {"player_id": this.id},
-// 					  function(data){
-// 						  $("#selectedgames").html(data);
-// 					  });
-
-
-// 				$.post("gen_heatmap_img/", {"player_id": this.id},
-// 					  function(data){
-// 						  $('#heatmapdiv').html(data);
-// 					  });
-
-
-// 	activate_pselect = function(){
-// 		$('div.playerlink').click(function(){
-// 			$.post("gen_heatmap_img/", {"player_id": this.id},
-// 				function(data){
-// 					$('#heatmapdiv').html(data);
-// 				});
-// 		});
-// 	};
-
-// //	$.post("gen_heatmap_img/", {"pname": "Kobe Bryant"},
-// //				  function(data){$('#heatmapdiv').html(data); });
 
 
 
