@@ -1,4 +1,4 @@
-import cherrypy, os, sys
+import cherrypy, os, sys, json
 from models import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -26,7 +26,6 @@ class Main():
 		"""
 		filtered_shot_rows = []
 		for shot_row in shot_rows:
-			print shot_row[3]
 			if not (shot_row[0] == 0 and abs(shot_row[1]) in [28,42]) and ("Free" not in shot_row[3] and "Lay" not in shot_row[3]):
 				filtered_shot_rows.append(shot_row)
 
@@ -61,23 +60,17 @@ class Main():
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
 			i = len(shot_rows)
 			filtered_shot_rows = self.free_throw_filter(shot_rows)
-			print str(i) + str(len(filtered_shot_rows))
 			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
 			hm.generate_heatmap_image()
 			path = "static/" + path
 			hm.im.save(path, "gif")
-			del hm
 			return imtag
 	gen_heatmap_img.exposed = True
 
 	def get_teams(self):
 		""" Returns all team names in JSON. """
-		json_teams = []
 		teams = self.session.query(Team).all()
-		for team in teams:
-			json_team = "{'id': " + str(team.id) + ", 'name': '" + team.name + "'}"
-			json_teams.append(json_team)
-		return "{\"teams\": [" + ",".join(json_teams) + "]}"
+		return json.dumps({'teams': [{'id': t.id, 'name': t.name} for t in teams]})
 	get_teams.exposed = True
 
 	def get_players(self, team_id=""):
@@ -85,14 +78,13 @@ class Main():
 		tid = int(team_id[4:])
 		json_players = []
 		t = self.session.query(Team).filter_by(id = tid).first()
-		players = t.players
-		for player in players:
+		t.players
+		for player in t.players:
 			if player.n_shots > 400:
 				name = player.firstname + " " + player.lastname
 				name = name.replace("'", "")
-				json_player = "{'id': " + str(player.id) + ", 'name': '" + name + "'}"
-				json_players.append(json_player)
-		return "{\"teamname\": \"" + t.name + "\", \"players\": [" + ",".join(json_players) + "]}"
+				json_players.append({'id': player.id, 'name': name})
+		return json.dumps({'teamname': t.name, 'players': json_players})
 	get_players.exposed = True
 
 
