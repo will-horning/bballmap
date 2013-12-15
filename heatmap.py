@@ -89,7 +89,6 @@ class HeatMap():
 		self.diff_min = min([v[1] - v[0] for v in self.shot_locs.values()])
 		self.diff_range = self.diff_max - self.diff_min
 			
-
 	def tally_shot_locs(self):
 		"""
 		Sums all the made and missed shots taken at each location
@@ -102,27 +101,12 @@ class HeatMap():
 			shot_result = int(shot[2])
 			loc = (shot[0], shot[1])
 			self.shot_locs[loc][shot_result] += 1
-
-	def remove_outliers(self, upper_bound):
-		"""
-		Filters self.shot_locs based on an upperbound for the
-		total number of shots.  Returns each key,val pair that
-		was removed.
-		"""
-		removed = []
-		for k, v in self.shot_locs.iteritems():
-			if sum(v[:2]) > upper_bound:
-				removed.append((k,v))
-		for k, v in removed:
-			self.shot_locs.pop(k)
-		return removed
 	
 class Py_HeatMap(HeatMap):
 
 	def generate_heatmap_image(self, **kwargs):
 		self.set_grid_size((50,94))
 		self.tally_shot_locs()
-		self.remove_outliers(100)
 		self.halve_court()
 		self.py_radiate(**kwargs)
 		self.update_extrema()
@@ -209,7 +193,7 @@ class Py_HeatMap(HeatMap):
 				for y in range(-r_dist,r_dist+1):
 					r_locs.append((loc[0] + x, loc[1] + y))
 			for cell in r_locs:
-				dist = max([abs(cell[0] - loc[0]), abs(cell[1] - loc[1])])
+				dist = round(math.sqrt(math.pow((cell[0] - loc[0]), 2) + math.pow((cell[1] - loc[1]), 2)))
 				r_val = [self.gaussian_saturation(vals[0], dist, r_dist),
 						 self.gaussian_saturation(vals[1], dist, r_dist)]
 				if all([(cell[0] < self.grid_w), (cell[1] < self.grid_h),
@@ -220,7 +204,6 @@ class Py_HeatMap(HeatMap):
 												prev[1] + r_val[1]]
 					except KeyError:
 						self.shot_locs[cell] = r_val
-
 
 	def shade_grid_cell(self, loc, rgb, opacity=0.8):
 		for y in range(self.cell_h):
