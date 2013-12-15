@@ -11,7 +11,7 @@ class HeatMap():
 		self.grid_h = grid_h
 		self.grid_coords = self.extract_coords(raw_shot_rows)
 		self.cell_w = int(round(float(self.im.size[0]) / float(self.grid_w)))
-		self.cell_h = int(round(float(self.im.size[1]) / float(self.grid_h)))
+		self.cell_h = int(round(float(self.im.size[1]) / (float(self.grid_h))))
 
 	def in_bounds(self, loc, dim):
 		return loc[0] < self.im.size[0] and loc[0] >= 0 and loc[1] < self.im.size[1] and loc[1] >= 0
@@ -103,7 +103,6 @@ class HeatMap():
 			self.shot_locs[loc][shot_result] += 1
 	
 class Py_HeatMap(HeatMap):
-
 	def generate_heatmap_image(self, **kwargs):
 		self.set_grid_size((50,94))
 		self.tally_shot_locs()
@@ -112,6 +111,7 @@ class Py_HeatMap(HeatMap):
 		self.update_extrema()
 		self.find_colors()
 		self.shade_all()
+		self.im = self.im.crop((0,0,300,282))
 
 	def linear_saturation(self, val, dist, r_dist, s=0.15):
 		return int(round(float(val) * ((1 - (s * dist)) * val)))
