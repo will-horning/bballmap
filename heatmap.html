@@ -8,13 +8,15 @@
 </div>
 
 
-<div id="teamselect">
-Choose a team:
-</div>
- 
-<div id="selectedplayers">
-</div>
- 
+
+<select id="teamselect" onchange="get_players()">
+  <option value="None">Choose a team:</option>
+</select>
+
+<select id="playerselect" onchange="choose_player()" style="display:none;">
+  <option value="None">Choose a player:</option>
+</select>
+
 <div id="unselectedplayers">
 </div>
 
