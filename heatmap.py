@@ -1,6 +1,6 @@
 import math, random
 from PIL import Image
-from time import time
+import time
 from models import *
 from collections import defaultdict
 
@@ -110,8 +110,10 @@ class Py_HeatMap(HeatMap):
 		self.py_radiate(**kwargs)
 		self.update_extrema()
 		self.find_colors()
+		self.impa = self.im.load()
 		self.shade_all()
 		self.im = self.im.crop((0,0,300,282))
+
 
 	def linear_saturation(self, val, dist, r_dist, s=0.15):
 		return int(round(float(val) * ((1 - (s * dist)) * val)))
@@ -210,12 +212,12 @@ class Py_HeatMap(HeatMap):
 			for x in range(self.cell_w):
 				cloc = ((self.cell_w * loc[0]) + x, (self.cell_h * loc[1]) + y)
 				if self.in_bounds(cloc, self.im.size):
-					pix = self.im.getpixel(cloc)
+					pix = self.impa[cloc[0], cloc[1]]
 					new_rgb = list(pix)
 					for i in range(3):
 						new_rgb[i] /= 4
 						new_rgb[i] += int(rgb[i] * opacity)
-					self.im.putpixel(cloc, tuple(new_rgb))
+					self.impa[cloc[0],cloc[1]] = tuple(new_rgb)
 
 	def shade_all(self):
 		for y in range(self.grid_h):
