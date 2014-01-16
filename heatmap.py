@@ -1,273 +1,66 @@
-import math, random
-from PIL import Image
-import time
-from models import *
 from collections import defaultdict
+import numpy as np
+from PIL import Image, ImageFilter
 
-class HeatMap():
-	def __init__(self, raw_shot_rows, impath, grid_w=50, grid_h=94):
-		self.im = Image.open(impath)
-		self.grid_w = grid_w
-		self.grid_h = grid_h
-		self.grid_coords = self.extract_coords(raw_shot_rows)
-		self.cell_w = int(round(float(self.im.size[0]) / float(self.grid_w)))
-		self.cell_h = int(round(float(self.im.size[1]) / (float(self.grid_h))))
-
-	def in_bounds(self, loc, dim):
-		return loc[0] < self.im.size[0] and loc[0] >= 0 and loc[1] < self.im.size[1] and loc[1] >= 0
-
-	def extract_coords(self, raw_shot_rows):
-		"""
-		Converts the raw coordinates (using CBSSports coordinate system)
-		to simple x,y coordinates where the top left corner is the origin
-		and x and y values are in grid cell numbers (so the max values are
-		given by self.grid_w and self.grid_h).
-		"""
-		tls = []
-		for shot_row in raw_shot_rows:
-			left = 0
-			top = 0
-			left = ((self.grid_w / 2) + int(shot_row[0]))
-			top = ((self.grid_h / 2) + int(shot_row[1]))
-			if left >= self.grid_w: left = self.grid_w - 1
-			if top >= self.grid_h: top = self.grid_h - 1
-			tls.append([left, top, shot_row[2]])
-		return tls
-
-	def set_grid_size(self, new_dim):
-		"""
-		Updates the values for self.grid_coords to reflect new grid
-		dimensions.
-		"""
-		coords = self.grid_coords
-		old_dim = (self.grid_w, self.grid_h)
-		old_cell_dim = (self.im.size[0] / old_dim[0],
-						self.im.size[1] / old_dim[1])
-		new_cell_dim = (self.im.size[0] / new_dim[0],
-						self.im.size[1] / new_dim[1])
-		new_coords = []
-		for coord in coords:
-			pixel_coord = (old_cell_dim[0] * coord[0],
-						   old_cell_dim[1] * coord[1])
-			new_coords.append((int(round(float(pixel_coord[0]) / new_cell_dim[0])),
-							   int(round(float(pixel_coord[1]) / new_cell_dim[1])),
-							   coord[2]))
-		self.cell_w, self.cell_h = new_cell_dim
-		self.grid_w, self.grid_h = new_dim
-		self.grid_coords = new_coords
-
-	def halve_court(self):
-		"""
-		Flips any locations below the half court line up to the
-		top half. (CBS Sports plots shot locations on a full court map, 1st and 2nd quarter shots will appear
-		on one half, 3rd and 4th on the other. This just ensures all the shots are plotted on one half.)
-		"""
-		locs = self.shot_locs.copy()
-		for loc, v in locs.iteritems():
-			if loc[1] >= (self.grid_h / 2):
-				self.shot_locs.pop(loc)
-				nloc = (self.grid_w - loc[0], self.grid_h - loc[1])
-				try:
-					pv = self.shot_locs[nloc]
-					self.shot_locs[nloc] =  [pv[0] + v[0], pv[1] + v[1]]
-				except:
-					self.shot_locs[nloc] = v
-
-	def update_extrema(self):
-		"""
-		Checks every entry in shot_locs and sets the following
-		variables to whatever the current extrema are.
-		"""
-		self.miss_max = max([v[0] for v in self.shot_locs.values()])
-		self.made_max = max([v[1] for v in self.shot_locs.values()])
-		self.total_max = max([sum(v) for v in self.shot_locs.values()])
-		self.miss_min = min([v[0] for v in self.shot_locs.values()])
-		self.made_min = min([v[1] for v in self.shot_locs.values()])
-		self.total_min = min([sum(v) for v in self.shot_locs.values()])
-		self.shot_range = self.made_max + self.miss_max
-		self.diff_max = max([v[1] - v[0] for v in self.shot_locs.values()])
-		self.diff_min = min([v[1] - v[0] for v in self.shot_locs.values()])
-		self.diff_range = self.diff_max - self.diff_min
-			
-	def tally_shot_locs(self):
-		"""
-		Sums all the made and missed shots taken at each location
-		in grid_coords, then creates a dict self.shot_locs, keys
-		are 2tuple locations, values are lists with the following format:
-		shot_locs[loc] = [num_made_from_loc, num_missed_from_loc]
-		"""
-		self.shot_locs = defaultdict(lambda: [0,0])
-		for shot in self.grid_coords:
-			shot_result = int(shot[2])
-			loc = (shot[0], shot[1])
-			self.shot_locs[loc][shot_result] += 1
+PATH_TO_COURT_IMG = "static/nbagrid.bmp"
+		
+class Heatmap():
 	
-class Py_HeatMap(HeatMap):
-	def generate_heatmap_image(self, **kwargs):
-		self.set_grid_size((50,94))
-		self.tally_shot_locs()
-		self.halve_court()
-		self.py_radiate(**kwargs)
-		self.update_extrema()
-		self.find_colors()
-		self.impa = self.im.load()
-		self.shade_all()
+	def __init__(self, shot_rows, impath=PATH_TO_COURT_IMG, grid_d=(50,47)):
+		self.im = Image.open(impath)
 		self.im = self.im.crop((0,0,300,282))
+		self.cell_w, self.cell_h = self.im.size[0] / grid_d[0], self.im.size[1] / grid_d[1]
+		self.grid_d = grid_d
+		self.grid_w, self.grid_h = self.grid_d
+		self.shot_data = self.get_shot_data(shot_rows)
+		self.spectrum = [(r, 0, 255) for r in range(256)] + [(255, 0, b) for b in range(256, 0, -1)]
 
-
-	def linear_saturation(self, val, dist, r_dist, s=0.15):
-		return int(round(float(val) * ((1 - (s * dist)) * val)))
-
-	def logarithm_saturation(self, val, dist, r_dist):
-		if dist <= 0: return val
-		return int(round(float(val) * (1.0 - math.log(dist, r_dist))))
-
-	def reverse_log_saturation(self, val, dist, r_dist):
-		if dist >= r_dist: return 0.0
-		return int(round(float(val) * (math.log(r_dist - dist, r_dist))))
-
-	def polynomial_saturation(self, val, dist, r_dist, exp=8):
-		sat = 1.0 - pow(float(dist)/r_dist,2)
-		if sat < 0: sat = 0
-		return val * sat
-
-	def gaussian_saturation(self, val, dist, r_dist):
-		self.c = 1.5
-		if val == 0: return 0.0
-		a = val
-		b = 0
-		c = self.c
-		x = dist
-		return a * pow(math.e, (-1 * pow((x - b), 2) / (2 * c * c)))
-
-	def cauchy_saturation(self, val, dist, r_dist):
-		if dist == 0: return val
-		if val == 0: return 0.0
-		x0 = 0
-		x = dist
-		#g = 1.0 / (math.pi * val)
-		g = 3.0
-		amp = 1.0 / (math.pi / 2.0)
-		r = ((1 / math.pi) * g / (pow(x - x0,2) + (g*g))) / amp
-		return r * val
-
-		
-	def get_saturation_value(self, nmade, nmiss):
-		"""
-		Saturation is determined by the total number of
-		shots attempted at a location (made and missed),
-		relative to the maximum total out of all locations.
-		Returns a float in the range [0,1].
-		"""
-		total = nmade + nmiss
-		if total == 0: return 0.05
-		min_sat = 0.1
-		per = float(total) / self.total_max
-		sat = min_sat + ((1.0 - min_sat) * per)
-		return sat
-
-	def find_colors(self):
-		"""
-		Creates the 3tuple rgb value for each entry in shot_locs,
-		then stores it in the dict self.loc_colors. 
-		"""
-		self.loc_colors = {}
-		for loc, shot_count in self.shot_locs.iteritems():
-			nmiss = shot_count[0]
-			nmade = shot_count[1]
-			miss_p = (float(nmiss) - self.miss_min) / (self.miss_max - self.miss_min)
-			made_p = (float(nmade) - self.made_min) / (self.made_max - self.made_min)
-			r = int(round(255*made_p))
-			b = int(round(255*miss_p))
-			self.loc_colors[loc] = (r,0,b)
-
-	def py_radiate(self, r_dist=5):
-		"""
-		Shades a normal distribution around each shot coloring the nearby grid-cells appropriately,
-		currently uses a gaussian function for the curve.
-
-		:keyword rdist: The radius of the gaussian bump applied to each location.
-		"""
-		locs = self.shot_locs.copy()
-		for loc, vals in locs.iteritems():
-			r_locs = []
-			for x in range(-r_dist, r_dist+1):
-				for y in range(-r_dist,r_dist+1):
-					r_locs.append((loc[0] + x, loc[1] + y))
-			for cell in r_locs:
-				dist = round(math.sqrt(math.pow((cell[0] - loc[0]), 2) + math.pow((cell[1] - loc[1]), 2)))
-				r_val = [self.gaussian_saturation(vals[0], dist, r_dist),
-						 self.gaussian_saturation(vals[1], dist, r_dist)]
-				if all([(cell[0] < self.grid_w), (cell[1] < self.grid_h),
-						(cell[0] >= 0),(cell[1] >= 0)]):
+	def generate_heatmap(self, rdist=3, sd=1.2):
+		self.shot_totals = np.zeros(self.grid_d)
+		self.shot_pcts = np.zeros(self.grid_d)
+		visited = set()
+		for shot_point in self.shot_data:
+			x0, y0 = shot_point[1]
+			g = self.make_gaussian(x0, y0, shot_point[2], rdist, rdist, sd)
+			for x in xrange(x0 - rdist, x0 + rdist):
+				for y in xrange(y0 - rdist, y0 + rdist):
 					try:
-						prev = self.shot_locs[cell]
-						self.shot_locs[cell] = [prev[0] + r_val[0],
-												prev[1] + r_val[1]]
-					except KeyError:
-						self.shot_locs[cell] = r_val
-
-	def shade_grid_cell(self, loc, rgb, opacity=0.8):
-		for y in range(self.cell_h):
-			for x in range(self.cell_w):
-				cloc = ((self.cell_w * loc[0]) + x, (self.cell_h * loc[1]) + y)
-				if self.in_bounds(cloc, self.im.size):
-					pix = self.impa[cloc[0], cloc[1]]
-					new_rgb = list(pix)
-					for i in range(3):
-						new_rgb[i] /= 4
-						new_rgb[i] += int(rgb[i] * opacity)
-					self.impa[cloc[0],cloc[1]] = tuple(new_rgb)
-
-	def shade_all(self):
-		for y in range(self.grid_h):
-			for x in range(self.grid_w):
-				try:
-					color = self.loc_colors[(x,y)]
-					self.shade_grid_cell((x,y), color)
-				except KeyError:
-					self.shade_grid_cell((x,y), (13,0,9))
-
-	def get_color(self, val):
-		nval = val - self.diff_min
-		i = int(round(len(self.spectrum) * (float(nval) / self.diff_range)))
-		if i < 0: return self.spectrum[0]
-		elif i >= len(self.spectrum): return self.spectrum[-1]
-		else: return self.spectrum[i]
-
-	def generate_spectrum(self):
-		self.spectrum = []
-		rr = range(0,256)
-		rr.reverse()
-		for r in range(0,256):
-			self.spectrum.append((r,0,255))
-		for b in rr:
-			self.spectrum.append((255,0,b))
-
-	def use_full_spectrum(self):
-		self.spectrum = []
-		rr = range(0,256)
-		rr.reverse()
-		for g in range(0,256):
-			self.spectrum.append((255,g,0))
-		for r in rr:
-			self.spectrum.append((r,255,0))
-		for b in range(0,256):
-			self.spectrum.append((0,255,b))
-		for g in rr:
-			self.spectrum.append((0,g,255))
-		for r in range(0,256):
-			self.spectrum.append((r,0,255))
-		self.spectrum.reverse()
+						self.shot_totals[x,y] = max(g(x, y), self.shot_totals[x,y])
+						if (x, y) in visited: self.shot_pcts[x,y] = np.mean([shot_point[0], self.shot_pcts[x,y]])
+						else: self.shot_pcts[x,y] = shot_point[0]
+					except IndexError: pass
+					visited.add((x,y))
+		self.shot_totals = self.shot_totals / max(np.nditer(self.shot_totals))
+		im2 = Image.new('RGBA', self.im.size)
+		pa = im2.load()
+		for x in xrange(0, self.im.size[0]):
+			for y in xrange(0, self.im.size[1]):
+				gx, gy = x / self.cell_w, y / self.cell_h
+				opacity = self.shot_totals[gx,gy]
+				r, g, b = self.spectrum[int(self.shot_pcts[gx,gy] * 
+					(len(self.spectrum) - 1))]
+				pa[x,y] = int(r * opacity), 0, int(b * opacity), 200
+		for i in range(4): im2 = im2.filter(ImageFilter.BLUR)
+		self.im.paste(im2, (0,0), im2)
 		
-	def use_duke_spectrum(self):
-		self.spectrum = []
-		rr = range(0,256)
-		rr.reverse()
-		for r in range(0,256):
-			self.spectrum.append((r,r,255))
-		return
-		for b in rr:
-			self.spectrum.append((255,0,b))
-
-		
+	def get_shot_data(self, shot_rows):
+	    m = defaultdict(lambda: [0, 0])
+	    for i in shot_rows:
+	    	x1, x2 = self.grid_w / 2 + int(i[0]), self.grid_h + int(i[1])
+	    	shot_made = int(i[2])
+	        if x2 > self.grid_h: x1, x2 = self.grid_w - x1, 2*self.grid_h - x2
+	        if x1 >= self.grid_w: x1 -= 1
+	        if x2 >= self.grid_h: x2 -= 1
+	        m[(x1,x2)][1] += 1
+	        if shot_made: m[(x1,x2)][0] += 1
+	    self.total_shots = sum([v[1] for v in m.values()])
+	    return [[float(v[0]) / v[1], list(k), float(v[1]) / self.total_shots] for k, v in m.iteritems()]
+	    
+	def make_gaussian(self, x0, y0, A, rho_x, rho_y, sd, theta=0):
+	    a = np.cos(theta)**2 / (2*rho_x**2) + np.sin(theta)**2 / (2 * rho_y**2)
+	    b = np.sin(2*theta) / (4*rho_y**2) - np.sin(2*theta) / (4 * rho_x**2)
+	    c = np.sin(theta)**2 / (2*rho_x**2) + np.cos(theta)**2 / (2 * rho_y**2)
+	    def f(x, y):
+	        xd, yd = (x - x0), (y - y0)
+	        return A * np.e**(-(a * xd**2 + 2 * b * xd * yd + c * yd**2))
+	    return f

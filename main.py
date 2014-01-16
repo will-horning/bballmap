@@ -3,7 +3,7 @@ from models import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import *
-from heatmap import Py_HeatMap
+from heatmap import Heatmap
 
 PATH_TO_COURT_IMG = "static/nbagrid.bmp"
     
@@ -60,8 +60,8 @@ class Main():
 			shot_rows = [list(row) for row in sqlresponse.fetchall()]
 			i = len(shot_rows)
 			filtered_shot_rows = self.free_throw_filter(shot_rows)
-			hm = Py_HeatMap(filtered_shot_rows, PATH_TO_COURT_IMG)
-			hm.generate_heatmap_image()
+			hm = Heatmap(filtered_shot_rows)
+			hm.generate_heatmap()
 			path = "static/" + path
 			hm.im.save(path, "gif")
 			return imtag
