@@ -44,8 +44,8 @@ function(){
 	};
 
 	update_heatmap_img = function(){
-		$.get("gen_heatmap_img/",
-			  {"player_ids": selected_player_list,
+		$.get("gen_heatmap_img",
+			  {"player_id": selected_player_list,
 			   "sd": sd},
 			function(data){
 				$('#heatmapdiv').html(data);
