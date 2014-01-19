@@ -9,11 +9,33 @@ class Heatmap():
 	def __init__(self, shot_rows, impath=PATH_TO_COURT_IMG, grid_d=(50,47)):
 		self.im = Image.open(impath)
 		self.im = self.im.crop((0,0,300,282))
-		self.cell_w, self.cell_h = self.im.size[0] / grid_d[0], self.im.size[1] / grid_d[1]
+		self.cell_w = self.im.size[0] / grid_d[0]
+		self.cell_h = self.im.size[1] / grid_d[1]
 		self.grid_d = grid_d
 		self.grid_w, self.grid_h = self.grid_d
 		self.shot_data = self.get_shot_data(shot_rows)
-		self.spectrum = [(r, 0, 255) for r in range(256)] + [(255, 0, b) for b in range(256, 0, -1)]
+		self.spectrum = [(r, 0, 255) for r in range(256)]
+		self.spectrum += [(255, 0, b) for b in range(255, -1, -1)]
+
+	def gen_hm2(self, rdist=2, sd=1.2):
+		shot_map = self.local_shot_totals.copy()
+		sorted_sts = [(v, k) for k, v in self.local_shot_totals.iteritems()]
+		sorted_sts.sort(key=lambda x: -x[0])
+		mix = [[lambda x,y: 0.0]*self.grid_h for i in range(self.grid_w)]
+		for n_shots, grid_loc in sorted_sts:
+			if grid_loc in shot_map:
+				x0 = grid_loc[0] * self.cell_w + (self.cell_w / 2)
+				y0 = grid_loc[1] * self.cell_h + (self.cell_h / 2)
+				g = self.make_gaussian(x0, y0, float(n_shots) / self.max_shots, rdist, rdist, sd)
+				mix[grid_loc[0]][grid_loc[1]] = g
+		im2 = Image.new("RGB", self.im.size)
+		im2pa = im2.load()
+		for x in xrange(self.im.size[0]):
+			for y in xrange(self.im.size[1]):
+				gx, gy = x / self.cell_w, y / self.cell_h
+				i = int((len(self.spectrum) - 1) * mix[gx][gy](x, y))
+				im2pa[x,y] = self.spectrum[i]				
+		self.im = im2
 
 	def generate_heatmap(self, rdist=3, sd=1.2):
 		self.shot_totals = np.zeros(self.grid_d)
@@ -54,6 +76,8 @@ class Heatmap():
 	        m[(x1,x2)][1] += 1
 	        if shot_made: m[(x1,x2)][0] += 1
 	    self.total_shots = sum([v[1] for v in m.values()])
+	    self.max_shots = max([v[1] for v in m.values()])
+	    self.local_shot_totals = {k: v[1] for k, v in m.iteritems()}
 	    return [[float(v[0]) / v[1], list(k), float(v[1]) / self.total_shots] for k, v in m.iteritems()]
 	    
 	def make_gaussian(self, x0, y0, A, rho_x, rho_y, sd, theta=0):
