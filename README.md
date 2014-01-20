@@ -10,4 +10,4 @@ How to Run:
 		pip install -r requirements.txt
 		python main.py
 
-Then just point your browser to http://localhost:8000
+Then just point your browser to http://localhost:5000
