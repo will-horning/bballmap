@@ -2,14 +2,14 @@ from collections import defaultdict
 import numpy as np
 from PIL import Image, ImageFilter
 
-PATH_TO_COURT_IMG = "static/nbagrid.bmp"
+# PATH_TO_COURT_IMG = "static/nbagrid.bmp"
+PATH_TO_COURT_IMG = "static/nbacourt.png"
 		
 class Heatmap():
 	
 	def __init__(self, shot_rows, impath=PATH_TO_COURT_IMG, grid_d=(50,47)):
 		self.im = Image.open(impath)
-		self.im = self.im.crop((0,0,300,282))
-		self.im = Image.eval(self.im, lambda x: x / 7)
+		# self.im = Image.eval(self.im, lambda x: x / 4)
 		self.cell_w = self.im.size[0] / grid_d[0]
 		self.cell_h = self.im.size[1] / grid_d[1]
 		self.grid_d = grid_d
