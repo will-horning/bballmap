@@ -7,13 +7,13 @@ function(){
 	var selected_player_list = [];
 	var td = [];
 
-	$.getJSON("get_teams", {}, function(data){
-		teams = data["teams"];
-		for(i=0; i < teams.length; i++){
-			team = teams[i];
-			$('#teamselect').append('<option value="' + 'team' + team.id + '">' + team.name + '</option>');
-		}
-	});
+	// $.getJSON("get_teams", {}, function(data){
+	// 	teams = data["teams"];
+	// 	for(i=0; i < teams.length; i++){
+	// 		team = teams[i];
+	// 		$('#teamselect').append('<option value="' + 'team' + team.id + '">' + team.name + '</option>');
+	// 	}
+	// });
 	
 	get_players = function(){
 		$.getJSON("get_players", {"team_id": $("#teamselect option:selected").val()}, 

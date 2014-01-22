@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import *
 from heatmap import Heatmap
-from flask import Flask, request
+from flask import Flask, request, render_template
 
 PATH_TO_COURT_IMG = "static/nbagrid.bmp"
     
@@ -17,12 +17,10 @@ session = Session()
 
 @app.route("/")
 def index():
-    html = ""
-    with open("heatmap.html", "r") as f:
-        f = open("heatmap.html", "r")
-        html = f.read()
-    return html
-
+    teams = session.query(Team).all()
+    teams = [[team.id, team] for team in teams]
+    return render_template("heatmap.html", teams=teams)
+    
 def free_throw_filter(shot_rows):
     """
     Returns only rows of Shots table that are NOT free throws or uncontested layups.
@@ -65,12 +63,6 @@ def gen_heatmap_img():
         path = "static/" + path
         hm.im.save(path, "gif")
         return imtag
-
-@app.route("/get_teams")
-def get_teams():
-    """ Returns all team names in JSON. """
-    teams = session.query(Team).all()
-    return json.dumps({'teams': [{'id': t.id, 'name': t.name} for t in teams]})
 
 @app.route("/get_players", methods=['GET'])
 def get_players():
