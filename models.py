@@ -1,9 +1,9 @@
 from sqlalchemy import *
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relation, backref
+from sqlalchemy.orm import sessionmaker, relationship, backref
 import datetime
 
-db = create_engine("sqlite:///shots.db")
+db = create_engine("sqlite:///shots2.db")
 Base = declarative_base()
 
 QUARTER_LENGTH_IN_MIN = 12 # Used for converting game time to absolute time.
@@ -38,36 +38,55 @@ shot_type_map[23] = "Floating Jump Shot"
 shot_type_map[24] = "Leaning Jump Shot"
 shot_type_map[25] = "Mini Hook Shot"
 
-    
+
 class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    players = relationship("Player", backref="team")
+    # away_games = relationship("Game", backref='away_team', foreign_keys='Game.away_team_id')
+    # home_games = relationship("Game", backref='home_team', foreign_keys='Game.home_team_id')
 
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
         return self.name
+
+class Game(Base):
+	__tablename__ = "games"
+	id = Column(Integer, primary_key=True)
+	home_team_id = Column(Integer, ForeignKey("teams.id"))
+	away_team_id = Column(Integer, ForeignKey("teams.id"))
+	datetime = Column(DateTime)
+	shots = relationship("Shot", backref="game")
+	away_team = relationship("Team", foreign_keys=away_team_id)
+	home_team = relationship("Team", foreign_keys=home_team_id)
+
+	def __init__(self, home_team, away_team, game_datetime):
+		self.home_team = home_team
+		self.away_team = away_team
+		self.datetime = game_datetime
     
 class Player(Base):
 	__tablename__ = "players"
 
 	id = Column(Integer, primary_key=True)
-	firstname = Column(String)
-	lastname = Column(String)
+	full_name = Column(String)
+	# firstname = Column(String)
+	# lastname = Column(String)
 	team_id = Column(Integer, ForeignKey("teams.id"))
-	team = relation(Team, backref=backref("players", order_by=id))
+	# team = relationship(Team, backref=backref("players", order_by=id))
 	n_shots = Column(Integer)
+	shots = relationship("Shot", backref="player")
 
-	def __init__(self, pid, fname, lname, team_id):
+	def __init__(self, pid, full_name, team):
 		self.id = pid
-		self.firstname = fname
-		self.lastname = lname
-		self.team_id = team_id
+		self.full_name = full_name
+		self.team = team
 
 	def __repr__(self):
-		return self.firstname + " " + self.lastname + " " + str(self.id)
+		return self.full_name + " " + str(self.id)
 
 class Shot(Base):
 	__tablename__ = "shots"
@@ -75,8 +94,10 @@ class Shot(Base):
 	shotresult = Column(Integer)
 	datetime = Column(DateTime)
 	quarter = Column(Integer)
-	player_id = Column(Integer, ForeignKey("players.id"))
-	player = relation(Player, backref=backref("shots", order_by=id))
+	player_id = Column(Integer, ForeignKey('players.id'))
+	# player = relationship(Player, backref=backref("shots", order_by=id))
+	game_id = Column(Integer, ForeignKey('games.id'))
+	# game = relationship(Game, backref=backref("shots", order_by=id))
 	shot_type = Column(String(50))
 	xcoord = Column(Integer)
 	ycoord = Column(Integer)
@@ -90,16 +111,18 @@ class Shot(Base):
 		ret += [" shot by ", self.player.firstname + " " + self.player.lastname]
 		return "".join(ret)
 
-	def __init__(self, shot_data_string, date_string):
+	def __init__(self, shot_data_string, date_string, game, player):
 		shot_data = shot_data_string.split(",")
 		self.shotresult = int(shot_data[0])
 		self.quarter = int(shot_data[2])
 		self.datetime = self.get_absolute_time(shot_data[1], date_string)
-		self.player_id = int(shot_data[3])
+		# self.player_id = int(shot_data[3])
 		self.shot_type = shot_type_map[int(shot_data[5])]
 		self.xcoord = int(shot_data[6])
 		self.ycoord = int(shot_data[7])
 		self.distance = int(shot_data[8].replace('"', ''))
+		self.game = game
+		self.player = player
 
 	def get_absolute_time(self, game_time_string, date_string):
 		"""

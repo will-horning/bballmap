@@ -15,9 +15,10 @@ cbs_url = "http://www.cbssports.com"
 ncaa_url = "http://www.cbssports.com/collegebasketball/scoreboard/div1/"
 nba_url = "http://www.cbssports.com/nba/scoreboard/"
 date = datetime.date.today()
-n_years = 1
+n_years = 8
 start_urls = []
-for k in xrange(128):
+
+for k in xrange(100):
     url = nba_url + str(date - datetime.timedelta(days=k))
     start_urls.append(url.replace('-',''))
 
@@ -31,18 +32,19 @@ def get_shot_data(game_url):
     awaydata = re.search(r'awayScoringData: "(.*?)"', html).group(1).split("|")
     homedata = re.search(r'homeScoringData: "(.*?)"', html).group(1).split("|")
     awayname, homename = re.search(r'[->] ?(.*?) vs. (.*?) -', html).groups()
-    get_team_data(awayname, awaydata)
-    get_team_data(homename, homedata)
+    away_team = process_team_data(awayname, awaydata)
+    home_team = process_team_data(homename, homedata)
     date_string = re.search(r'NBA_(\d{8})', html).group(1)
     shot_data = re.search(r'shotData: "(.*?)\s', html).group(1)
+    g_time = datetime.datetime(int(date_string[:4]), int(date_string[4:6]), int(date_string[6:8]), 0, 0, 0)
+    g = Game(home_team, away_team, g_time)
     for shot_data_string in shot_data.strip().split("~"):
-        if shot_data_string:
-            try: 
-                session.add(Shot(shot_data_string, date_string))
-            except: print shot_data_string
+        if shot_data_string.count(',') > 4:
+            p = session.query(Player).filter_by(id=int(shot_data_string.split(',')[3])).first()
+            session.add(Shot(shot_data_string, date_string, g, p))
         else: print shot_data_string
-        
-def get_team_data(team_name, player_data):
+
+def process_team_data(team_name, player_data):
     t = session.query(Team).filter_by(name=team_name).first()
     if not t: 
         t = Team(team_name)
@@ -52,7 +54,8 @@ def get_team_data(team_name, player_data):
         if not session.query(Player).filter_by(id=player_id).first():
             # if "\xa0" in p_name: p_name = p_name.replace("\xa0", " ")
             if "&nbsp" in p_name: p_name = p_name.replace("&nbsp;", " ")
-            session.add(Player(player_id, p_name, t.id))
+            session.add(Player(player_id, p_name, t))
+    return t
 
 for start_url in start_urls:
     for game_url in get_gametracker_urls(start_url):
