@@ -8,7 +8,6 @@ Base = declarative_base()
 
 QUARTER_LENGTH_IN_MIN = 12 # Used for converting game time to absolute time.
 
-
 # Shot types are recorded in CBS Sports data as an integer corresponding to these values:
 shot_type_map = {}
 shot_type_map[0] = "Shot"
@@ -44,9 +43,7 @@ class Team(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     players = relationship("Player", backref="team")
-    # away_games = relationship("Game", backref='away_team', foreign_keys='Game.away_team_id')
-    # home_games = relationship("Game", backref='home_team', foreign_keys='Game.home_team_id')
-
+    
     def __init__(self, name):
         self.name = name
 
@@ -76,7 +73,6 @@ class Player(Base):
 	# firstname = Column(String)
 	# lastname = Column(String)
 	team_id = Column(Integer, ForeignKey("teams.id"))
-	# team = relationship(Team, backref=backref("players", order_by=id))
 	n_shots = Column(Integer)
 	shots = relationship("Shot", backref="player")
 
@@ -95,9 +91,7 @@ class Shot(Base):
 	datetime = Column(DateTime)
 	quarter = Column(Integer)
 	player_id = Column(Integer, ForeignKey('players.id'))
-	# player = relationship(Player, backref=backref("shots", order_by=id))
 	game_id = Column(Integer, ForeignKey('games.id'))
-	# game = relationship(Game, backref=backref("shots", order_by=id))
 	shot_type = Column(String(50))
 	xcoord = Column(Integer)
 	ycoord = Column(Integer)

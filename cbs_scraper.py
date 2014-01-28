@@ -15,10 +15,10 @@ cbs_url = "http://www.cbssports.com"
 ncaa_url = "http://www.cbssports.com/collegebasketball/scoreboard/div1/"
 nba_url = "http://www.cbssports.com/nba/scoreboard/"
 date = datetime.date.today()
-n_years = 8
+n_years = 6
 start_urls = []
 
-for k in xrange(100):
+for k in xrange(365 * n_years):
     url = nba_url + str(date - datetime.timedelta(days=k))
     start_urls.append(url.replace('-',''))
 

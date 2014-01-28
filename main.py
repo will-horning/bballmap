@@ -11,7 +11,7 @@ PATH_TO_COURT_IMG = "static/nbagrid.bmp"
 app = Flask(__name__)
 
 Session = sessionmaker()
-db = create_engine("sqlite:///shots.db", connect_args={'check_same_thread':False})
+db = create_engine("sqlite:///shots2.db", connect_args={'check_same_thread':False})
 Session.configure(bind=db)
 session = Session()
 
@@ -59,7 +59,8 @@ def gen_heatmap_img():
         i = len(shot_rows)
         filtered_shot_rows = free_throw_filter(shot_rows)
         hm = Heatmap(filtered_shot_rows)
-        hm.generate_heatmap(rdist, sd)
+        # hm.generate_heatmap(rdist, sd)
+        hm.old_gen_hm()
         path = "static/" + path
         hm.im.save(path, "gif")
         return imtag
@@ -73,7 +74,7 @@ def get_players():
     t.players
     for player in t.players:
         if player.n_shots > 400:
-            name = player.firstname + " " + player.lastname
+            name = player.full_name
             name = name.replace("'", "")
             json_players.append({'id': player.id, 'name': name})
     return json.dumps({'teamname': t.name, 'players': json_players})
