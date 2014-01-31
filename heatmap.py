@@ -6,10 +6,9 @@ import math
 PATH_TO_COURT_IMG = "static/nbacourt2.png"
 		
 class Heatmap():
-
 	def __init__(self, shot_rows, impath=PATH_TO_COURT_IMG, grid_d=(50,47)):
 		self.im = Image.open(impath)
-		self.im = Image.eval(self.im, lambda x: x / 8)
+		# self.im = Image.eval(self.im, lambda x: x / 8)
 		self.cell_w = self.im.size[0] / grid_d[0]
 		self.cell_h = self.im.size[1] / grid_d[1]
 		self.grid_d = grid_d
@@ -18,6 +17,11 @@ class Heatmap():
 		self.spectrum = [(r, 0, 255) for r in range(256)]
 		self.spectrum += [(255, 0, b) for b in range(255, -1, -1)]
 		self.shot_rows = shot_rows
+		
+	def k_nearest_gen(self, rdist=2, sd=1.2):
+		srim = self.get_shooting_rate_map(rdist=rdist, sd=sd)
+		spim = self.get_shooting_pct_map()
+		self.im.paste(spim, (0,0), srim)
 
 	def get_shooting_pct_map(self):
 		shot_pct_im = Image.new("RGB", self.im.size)
