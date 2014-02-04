@@ -59,12 +59,13 @@ class Game(Base):
 	shots = relationship("Shot", backref="game")
 	away_team = relationship("Team", foreign_keys=away_team_id)
 	home_team = relationship("Team", foreign_keys=home_team_id)
+	series_n = Column(Integer)
 
-	def __init__(self, home_team, away_team, game_datetime):
+	def __init__(self, home_team, away_team, game_datetime, series_n):
 		self.home_team = home_team
 		self.away_team = away_team
 		self.datetime = game_datetime
-    
+    	self.series_n = series_n
 class Player(Base):
 	__tablename__ = "players"
 

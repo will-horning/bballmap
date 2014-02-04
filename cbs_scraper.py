@@ -2,32 +2,112 @@ from models import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import *
+from bs4 import BeautifulSoup
 
 import datetime, re, requests
 
+name2abbrev = { 'Milwaukee': 'MIL',
+                'Miami': 'MIA',
+                'Atlanta': 'ATL',
+                'Boston': 'BOS',
+                'Detroit': 'DET',
+                'Denver': 'DEN',
+                'New York': 'NY',
+                'Sacramento': 'SAC',
+                'Brooklyn': 'BKN',
+                'Portland': 'POR',
+                'Toronto': 'TOR',
+                'Oklahoma City': 'OKC',
+                'Cleveland': 'CLE',
+                'Charlotte': 'CHA',
+                'Utah': 'UTA',
+                'Golden State': 'GS',
+                'Chicago': 'CHI',
+                'Houston': 'HOU',
+                'Washington': 'WAS',
+                'LA Lakers': 'LAL',
+                'LA Clippers': 'LAC',
+                'Philadelphia': 'PHI',
+                'Phoenix': 'PHO',
+                'Memphis': 'MEM',
+                'New Orleans': 'NO',
+                'Dallas': 'DAL',
+                'Orlando': 'ORL',
+                'Indiana': 'IND',
+                'San Antonio': 'SA',
+                'Minnesota': 'MIN'
+                }
+
 Session = sessionmaker()
-db = create_engine("sqlite:///shots2.db", 
+db = create_engine("sqlite:///shots2.db",
                     connect_args={'check_same_thread':False})
 Session.configure(bind=db)
 session = Session()
 
-cbs_url = "http://www.cbssports.com"
 ncaa_url = "http://www.cbssports.com/collegebasketball/scoreboard/div1/"
 nba_url = "http://www.cbssports.com/nba/scoreboard/"
-date = datetime.date.today()
-n_years = 6
-start_urls = []
+nba_gt_url = "http://www.cbssports.com/nba/gametracker/live/NBA_"
+today = datetime.date.today()
 
-for k in xrange(365 * n_years):
-    url = nba_url + str(date - datetime.timedelta(days=k))
-    start_urls.append(url.replace('-',''))
+# def get_abbrevs(n_years):
+#     for k in xrange(1, 365*n_years):
+#         game_date = (today - datetime.timedelta(days=k))
+#         scoreboard_url = ncaa_url + game_date.strftime('%Y%m%d')
+#         print scoreboard_url
+#         html = requests.get(scoreboard_url).text
+#         soup = BeautifulSoup(html)
+#         scoreboarddivs = [div for div in soup.findAll('div') if 'scoreBox' in div['class']]
+#         for div in scoreboarddivs:
+#             div.table.findAll('tr')
 
-def get_gametracker_urls(schedule_url):
-    html = requests.get(schedule_url).text
-    urls = re.findall(r'href=[\'"]?([^\'" >]+)', html)
-    return (cbs_url + url for url in urls if 'gametracker/live' in url)
+def get_game_urls(n_years):
+    for k in xrange(1, 365*n_years):
+        game_date = (today - datetime.timedelta(days=k))
+        espn_base_url = "http://espn.go.com/nba/schedule?date="
+        schedule_url = espn_base_url + game_date.strftime('%Y%m%d')
+        print schedule_url
+        soup = BeautifulSoup(requests.get(schedule_url).text)
+        topdiv = soup.find('div', {'id': 'my-teams-table'})
+        rows = topdiv.div.div.table.findAll('tr')
+        rows = [r for r in rows[2:] if 'oddrow' in r['class'] or 'evenrow' in r['class']]
+        rows = [r for r in rows if r.td.a]
+        for row in rows:
+            ht, at = row.td.a.contents[0].split(', ')
+            if 'conf' in at.lower(): continue
+            at = name2abbrev[re.search(r'(\D+)', at).group(1).strip()]
+            ht = name2abbrev[re.search(r'(\D+)', ht).group(1).strip()]
+            series_n = '0'
+            if row.td.br:
+                series_n = re.match('.*(\d+)', row.td.contents[2]).group(1)
+            game_id = '%s_%s@%s' % (game_date.strftime('%Y%m%d'), at, ht)
+            yield nba_gt_url + game_id, series_n
 
-def get_shot_data(game_url):
+def get_ncaa_game_urls(n_years):
+    for k in xrange(1, 365 * n_years):
+        game_date = (today - datetime.timedelta(days=k))
+        espn_base_url = "http://espn.go.com/mens-college-basketball/schedule?date="
+        schedule_url = espn_base_url + game_date.strftime('%Y%m%d')
+        soup = BeautifulSoup(requests.get(schedule_url).text)
+        topdiv = soup.find('div', {'id': 'my-teams-table'})
+        rows = topdiv.div.div.table.findAll('tr')
+        if 'Top 25' not in str(rows[0]): continue
+        for row in rows[2:]:
+            print row['class']
+            if row['class'] == 'stathead' or len(row.td.findAll('a')) < 2: break
+            elif 'oddrow' in row['class'] or 'evenrow' in row['class']:
+                ht = row.td.findAll('a')[0].contents[0]
+                at = row.td.findAll('a')[1].contents[0]
+                game_id = '%s_%s@%s' % (game_date.strftime('%Y%m%d'), at, ht)
+                yield game_id 
+                
+def get_ncaa_tournament_urls(start_date, n_years):
+    base_url = 'http://www.cbssports.com/collegebasketball/scoreboard/ncaa-tournament/'
+    for k in xrange(365 * n_years):
+        date = (start_date - datetime.timedelta(days=k))
+        if date.month in [3,4]:
+            yield base_url + str(date).replace('-', '')
+
+def get_shot_data(game_url, series_n):
     html = requests.get(game_url).text
     awaydata = re.search(r'awayScoringData: "(.*?)"', html).group(1).split("|")
     homedata = re.search(r'homeScoringData: "(.*?)"', html).group(1).split("|")
@@ -37,7 +117,7 @@ def get_shot_data(game_url):
     date_string = re.search(r'NBA_(\d{8})', html).group(1)
     shot_data = re.search(r'shotData: "(.*?)\s', html).group(1)
     g_time = datetime.datetime(int(date_string[:4]), int(date_string[4:6]), int(date_string[6:8]), 0, 0, 0)
-    g = Game(home_team, away_team, g_time)
+    g = Game(home_team, away_team, g_time, series_n)
     for shot_data_string in shot_data.strip().split("~"):
         if shot_data_string.count(',') > 4:
             p = session.query(Player).filter_by(id=int(shot_data_string.split(',')[3])).first()
@@ -56,7 +136,3 @@ def process_team_data(team_name, player_data):
             if "&nbsp" in p_name: p_name = p_name.replace("&nbsp;", " ")
             session.add(Player(player_id, p_name, t))
     return t
-
-for start_url in start_urls:
-    for game_url in get_gametracker_urls(start_url):
-        get_shot_data(game_url)
