@@ -4,7 +4,7 @@ This app is designed to graph a rough probability distribution of a basketball p
 
 All the data is stored in shots.db, it was scraped from cbssports.com and contains every shot taken in an NBA game from 2011 - 2013. 
 
-An older version is available [here](http://willhorning.pythonanywhere.com). 
+An older live version is available [here](http://willhorning.pythonanywhere.com). 
 
 How to Run:
 ===========
