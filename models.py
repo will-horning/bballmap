@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 import datetime
 
-db = create_engine("sqlite:///shots2.db")
+db = create_engine("sqlite:///shots.db")
 Base = declarative_base()
 
 QUARTER_LENGTH_IN_MIN = 12 # Used for converting game time to absolute time.
@@ -65,14 +65,13 @@ class Game(Base):
 		self.home_team = home_team
 		self.away_team = away_team
 		self.datetime = game_datetime
-    	self.series_n = series_n
+		self.series_n = series_n
+
 class Player(Base):
 	__tablename__ = "players"
 
 	id = Column(Integer, primary_key=True)
 	full_name = Column(String)
-	# firstname = Column(String)
-	# lastname = Column(String)
 	team_id = Column(Integer, ForeignKey("teams.id"))
 	n_shots = Column(Integer)
 	shots = relationship("Shot", backref="player")
@@ -111,7 +110,6 @@ class Shot(Base):
 		self.shotresult = int(shot_data[0])
 		self.quarter = int(shot_data[2])
 		self.datetime = self.get_absolute_time(shot_data[1], date_string)
-		# self.player_id = int(shot_data[3])
 		self.shot_type = shot_type_map[int(shot_data[5])]
 		self.xcoord = int(shot_data[6])
 		self.ycoord = int(shot_data[7])
