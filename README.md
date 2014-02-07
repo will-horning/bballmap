@@ -2,15 +2,15 @@ This app is designed to graph a rough probability distribution of a basketball p
 
 ![Kobe Bryant example](/kobe_example.gif "Example (Kobe Bryant):")
 
-All the data is stored in shots.db, it was scraped from cbssports.com and contains every shot taken in an NBA game from 2011 - 2013. 
+All the data is stored in shots.db, it was scraped from cbssports.com and contains every shot taken in an NBA game from 2010 - 2014. 
 
-An older version is available [here](http://willhorning.pythonanywhere.com). 
+An older live version is available [here](http://willhorning.pythonanywhere.com). 
 
 How to Run:
 ===========
 
 		virtualenv .env
-		. .env/bin/activate
+		. .env/bin/activate
 		pip install -r requirements.txt
 		python main.py
 
