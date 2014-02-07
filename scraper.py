@@ -49,13 +49,15 @@ nba_url = "http://www.cbssports.com/nba/scoreboard/"
 nba_gt_url = "http://www.cbssports.com/nba/gametracker/live/NBA_"
 today = datetime.date.today()
 
-def scrape(n_years):
-    for g_url, series_n in get_game_urls(n_years):
-        get_shot_data(g_url, series_n)
+d2 = datetime.datetime.strptime('20120901', '%Y%m%d')
+d1 = datetime.datetime.strptime('20130730', '%Y%m%d')
 
-def get_game_urls(n_years):
-    for k in xrange(1109, 365*n_years):
-        game_date = (today - datetime.timedelta(days=k))
+def scrape(start_date, end_date=datetime.date.today()):
+    return list(get_game_urls(start_date, end_date))
+
+def get_game_urls(start_date, end_date):
+    for k in xrange((end_date - start_date).days):
+        game_date = (start_date + datetime.timedelta(days=k))
         espn_base_url = "http://espn.go.com/nba/schedule?date="
         schedule_url = espn_base_url + game_date.strftime('%Y%m%d')
         soup = BeautifulSoup(requests.get(schedule_url).text)
