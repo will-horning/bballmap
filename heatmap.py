@@ -64,8 +64,8 @@ class Heatmap():
 		shot_pct_im = Image.new("RGB", self.im.size)
 		shot_pct_pa = shot_pct_im.load()
 		for gx, gy in self.grid_coords():
-			nearest = self.k_nearest_shot_pct(gx, gy)
-			sp = self.local_shot_pcts.get((gx, gy), nearest)
+			n = self.k_nearest_shot_pct(gx, gy)
+			sp = self.local_shot_pcts[gx,gy] if (gx, gy) in self.local_shot_pcts else n
 			for px, py in self.cell_pixel_coords(gx, gy):
 				i = int(sp * (len(self.spectrum) - 1))
 				shot_pct_pa[px,py] = self.spectrum[i]
@@ -86,10 +86,10 @@ class Heatmap():
 			for gx1, gy1 in self.grid_neighbors(gx, gy, rdist):
 				px, py = (gx + 0.5) * self.cell_w, (gy + 0.5) * self.cell_h
 				self.local_shot_totals[gx,gy] += f(px, py)
-		shot_max = max(self.local_shot_totals.values())
+		shot_max = max(self.local_shot_totals.itervalues())
 		for gx, gy in self.grid_coords():
 			for px, py in self.cell_pixel_coords(gx, gy):
-				shot_rate = self.local_shot_totals.get((gx,gy), 0.0)
+				shot_rate = self.local_shot_totals[gx,gy]
 				shot_rate /= float(shot_max)
 				try: shot_rate_pa[px,py] = int(255.0 * shot_rate)
 				except IndexError: pass
@@ -100,8 +100,7 @@ class Heatmap():
 		Returns the nearest shooting percentage to the given grid location gx, gy.
 		"""
 		dist = lambda x, y: math.sqrt((gx - x)**2 + (gy - y)**2)
-		locs = self.local_shot_pcts.keys()
-		_, mx, my = min([(dist(x, y), x, y) for x, y in locs])
+		mx, my = min(self.local_shot_pcts, key=lambda k: dist(*k))
 		return self.local_shot_pcts[mx, my]
 
 	def generate_histogram(self, rdist=2, sd=1.2):
@@ -113,9 +112,9 @@ class Heatmap():
 		for gx, gy in self.local_shot_totals.keys():
 			x0 = gx * self.cell_w + (self.cell_w / 2)
 			y0 = gy * self.cell_h + (self.cell_h / 2)
-			st = float(self.local_shot_totals.get((gx,gy), 0.0))
+			st = float(self.local_shot_totals[gx,gy]
 			f = self.make_gaussian(x0, y0, float(st) / self.max_shots, self.cell_w/2, self.cell_h/2, sd)
-			shot_pct = self.local_shot_pcts.get((gx, gy), 0.0)
+			shot_pct = self.local_shot_pcts[gx, gy]
 			i = int(shot_pct * (len(self.spectrum) - 1))
 			r, g, b = self.spectrum[i]
 			for dx in xrange(self.cell_w):
@@ -142,8 +141,8 @@ class Heatmap():
 			m[(x1,x2)][1] += 1
 			if shot_made: m[(x1,x2)][0] += 1
 		self.max_shots = max([v[1] for v in m.values()])
-		self.local_shot_totals = {k: v[1] for k, v in m.iteritems()}
-		self.local_shot_pcts = {k: float(v[0])/v[1] for k, v in m.iteritems()}
+		self.local_shot_totals = defaultdict(lambda: 0.0, ((k, v[1]) for k, v in m.iteritems()))
+		self.local_shot_pcts = defaultdict(lambda:0.0, ((k, float(v[0])/v[1]) for k, v in m.iteritems()))
 		max_sp = max(self.local_shot_pcts.values())
 		min_sp = min(self.local_shot_pcts.values())
 		for k, v in self.local_shot_pcts.iteritems():
