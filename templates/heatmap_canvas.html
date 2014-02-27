@@ -12,10 +12,12 @@
 </style>
 <body>
 
-<div id="heatmapdiv" class="heatmapimg" style="border: 2px dotted #009; width: 300px; height: 282px;">
-
+<div id="heatmapdiv" class="heatmapimg" style="display:none;">
     <img class="loading" src="static/loading.gif" >
 </div>
+
+<div id='heatmap_stage'></div>
+
 <select id="teamselect" >
   <option value="None">Choose a team:</option>
   {% for i, team in teams %}
@@ -27,15 +29,6 @@
   <option value="None">Choose a player:</option>
 </select>
 
-<!-- <div id="unselectedplayers">
-</div>
-
-<div id="unselectedgames">
-</div>
-
-<div id="selectedgames">
-</div>
- -->
 
 
 </body>

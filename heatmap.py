@@ -1,7 +1,7 @@
 from collections import defaultdict
 import numpy as np
 from PIL import Image, ImageFilter
-import math
+import math, webcolors
 # PATH_TO_COURT_IMG = "static/nbagrid.bmp"
 PATH_TO_COURT_IMG = "static/nbacourt2.png"
 		
@@ -112,8 +112,8 @@ class Heatmap():
 		for gx, gy in self.local_shot_totals.keys():
 			x0 = gx * self.cell_w + (self.cell_w / 2)
 			y0 = gy * self.cell_h + (self.cell_h / 2)
-			st = float(self.local_shot_totals[gx,gy]
-			f = self.make_gaussian(x0, y0, float(st) / self.max_shots, self.cell_w/2, self.cell_h/2, sd)
+			st = float(self.local_shot_totals[gx,gy])
+			f = self.make_gaussian(x0, y0, float(st) / self.max_shots, self.cell_w / 2, self.cell_h / 2, sd)
 			shot_pct = self.local_shot_pcts[gx, gy]
 			i = int(shot_pct * (len(self.spectrum) - 1))
 			r, g, b = self.spectrum[i]
@@ -141,13 +141,13 @@ class Heatmap():
 			m[(x1,x2)][1] += 1
 			if shot_made: m[(x1,x2)][0] += 1
 		self.max_shots = max([v[1] for v in m.values()])
-		self.local_shot_totals = defaultdict(lambda: 0.0, ((k, v[1]) for k, v in m.iteritems()))
+		self.local_shot_totals = defaultdict(lambda: 0.0, ((k, v[1] / float(self.max_shots)) for k, v in m.iteritems()))
 		self.local_shot_pcts = defaultdict(lambda:0.0, ((k, float(v[0])/v[1]) for k, v in m.iteritems()))
 		max_sp = max(self.local_shot_pcts.values())
 		min_sp = min(self.local_shot_pcts.values())
 		for k, v in self.local_shot_pcts.iteritems():
 			self.local_shot_pcts[k] = float(v - min_sp) / (max_sp - min_sp)
-
+		
 
 	def make_gaussian(self, x0, y0, A, rho_x, rho_y, sd, theta=0):
 		a = np.cos(theta)**2 / (2*rho_x**2) + np.sin(theta)**2 / (2 * rho_y**2)
@@ -157,6 +157,18 @@ class Heatmap():
 			xd, yd = (x - x0), (y - y0)
 			return A * np.e**(-(a * xd**2 + 2 * b * xd * yd + c * yd**2))
 		return f
+
+	def get_json_data(self):
+		data = []
+		for loc in self.local_shot_totals:
+			opacity = self.local_shot_totals[loc]
+			sp = self.local_shot_pcts[loc]
+			color = self.spectrum[int(sp * (len(self.spectrum) - 1))]
+			color = webcolors.rgb_to_hex(color)
+			x = (loc[0] + 0.5) * self.cell_w
+			y = (loc[1] + 0.5) * self.cell_h
+			data.append([x, y, opacity, color])
+		return {'local_shot_data': data}
 
 	# def gaussian_saturation(self, val, dist, r_dist):
 	# 	self.c = 1.5

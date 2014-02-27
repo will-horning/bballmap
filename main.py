@@ -20,6 +20,12 @@ def index():
     teams = [[team.id, team] for team in teams]
     return render_template("heatmap.html", teams=teams)
     
+@app.route("/canvas")
+def canvas():
+    teams = session.query(Team).all()
+    teams = [[team.id, team] for team in teams]
+    return render_template("heatmap_canvas.html", teams=teams)
+    
 def free_throw_filter(shot_rows):
     """
     Returns only rows of Shots table that are NOT free throws or 
@@ -45,10 +51,8 @@ def get_shot_data():
     shot_rows = [list(row) for row in sqlresponse.fetchall()]
     filtered_shot_rows = free_throw_filter(shot_rows)
     hm = Heatmap(filtered_shot_rows)
-    sd = hm.local_shot_totals
-    nmin, nmax = min(sd.values()), max(sd.values())
-    sd = [[x*hm.cell_w, y * hm.cell_h, (float(n) - nmin) / (nmax - nmin)] for (x, y), n in sd.iteritems()]
-    return json.dumps(sd)
+    print hm.get_json_data()
+    return json.dumps(hm.get_json_data())
 
 @app.route("/gen_heatmap_img", methods=['GET'])
 def gen_heatmap_img():
@@ -91,5 +95,4 @@ def get_players():
     return json.dumps({'teamname': t.name, 'players': json_players})
 
 if __name__ == "__main__":
-    app.debug == True
-    app.run()
+    app.run(debug=True)
